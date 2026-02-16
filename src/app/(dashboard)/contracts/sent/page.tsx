@@ -3,6 +3,8 @@ import { SentContractsList } from '@/components/features/contracts/sent-contract
 import { AutoRefresh } from '@/components/auto-refresh'
 import { notFound } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SentContractsPage() {
   const result = await getSentContracts()
 

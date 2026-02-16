@@ -119,6 +119,9 @@ export async function signContract({
   }
 
   revalidatePath(`/contracts/${signature.contractId}`)
+  revalidatePath('/contracts')
+  revalidatePath('/contracts/sent')
+  revalidatePath('/dashboard')
 
   return { success: true, allSigned }
 }
@@ -144,6 +147,8 @@ export async function declineContract(token: string) {
   })
 
   revalidatePath(`/contracts/${signature.contractId}`)
+  revalidatePath('/contracts')
+  revalidatePath('/contracts/sent')
 
   return { success: true }
 }

@@ -3,6 +3,8 @@ import { ContractDetail } from '@/components/features/contracts/contract-detail'
 import { AutoRefresh } from '@/components/auto-refresh'
 import { notFound } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 interface ContractPageProps {
   params: Promise<{
     id: string
