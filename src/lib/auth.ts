@@ -56,11 +56,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { organizationId: true },
+          select: {
+            organizationId: true,
+            organization: { select: { slug: true } },
+          },
         })
 
-        // Auto-create org for legacy users who don't have one
-        if (!dbUser?.organizationId) {
+        // Auto-create personal org for users without one or on shared default org
+        const needsOwnOrg = !dbUser?.organizationId || dbUser.organization?.slug === 'default'
+
+        if (needsOwnOrg) {
           const email = (user.email || 'user').split('@')[0]
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '-')
