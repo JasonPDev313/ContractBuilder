@@ -39,7 +39,7 @@ export default async function TemplatesPage() {
           </Link>
         </Button>
       </div>
-      <TemplateList templates={result.templates} />
+      <TemplateList templates={result.templates || []} />
     </div>
   )
 }

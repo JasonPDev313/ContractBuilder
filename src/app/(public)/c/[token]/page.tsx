@@ -72,8 +72,8 @@ export default async function PublicContractPage({
       contract={contractResult.contract}
       recipient={contractResult.recipient}
       viewInfo={{
-        viewCount: trackResult.viewCount,
-        isFirstView: trackResult.isFirstView,
+        viewCount: trackResult.viewCount || 0,
+        isFirstView: trackResult.isFirstView || false,
       }}
     />
   )

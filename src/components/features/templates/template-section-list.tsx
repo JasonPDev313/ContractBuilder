@@ -93,7 +93,7 @@ export function TemplateSectionList({
           toast({ title: 'Section removed' })
           router.refresh()
         } else {
-          throw new Error(result.error)
+          throw new Error((result as any).error || 'Failed to remove section')
         }
       } catch (error) {
         toast({
@@ -115,7 +115,7 @@ export function TemplateSectionList({
       if (result.success) {
         router.refresh()
       } else {
-        throw new Error(result.error)
+        throw new Error((result as any).error || 'Failed to toggle section')
       }
     } catch (error) {
       toast({
@@ -157,7 +157,7 @@ export function TemplateSectionList({
         router.refresh()
       } else {
         setSections(initialSections)
-        throw new Error(result.error)
+        throw new Error((result as any).error || 'Failed to reorder sections')
       }
     } catch (error) {
       toast({
@@ -191,7 +191,7 @@ export function TemplateSectionList({
         setEditingBodyId(null)
         toast({ title: 'Section updated' })
       } else {
-        throw new Error(result.error)
+        throw new Error((result as any).error || 'Failed to save section')
       }
     } catch (error) {
       toast({

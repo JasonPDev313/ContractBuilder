@@ -31,7 +31,7 @@ export const convertToTemplateSchema = z.object({
  */
 export const aiResponseSchema = z.object({
   message: z.string().min(1),
-  extractedData: z.record(z.unknown()).optional(),
+  extractedData: z.record(z.string(), z.unknown()).optional(),
   isComplete: z.boolean(),
   nextQuestion: z.string().optional(),
 })

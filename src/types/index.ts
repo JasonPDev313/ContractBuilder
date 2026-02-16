@@ -26,10 +26,5 @@ declare module 'next-auth' {
   }
 }
 
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id: string
-    role: string
-    organizationId: string | null
-  }
-}
+// Note: next-auth/jwt module augmentation removed due to bundling issues
+// JWT types are inferred from the actual next-auth configuration

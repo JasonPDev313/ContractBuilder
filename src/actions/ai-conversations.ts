@@ -13,7 +13,7 @@ import { z } from 'zod'
 // Define AI response schema inline to avoid import issues
 const aiResponseSchema = z.object({
   message: z.string().min(1),
-  extractedData: z.record(z.unknown()).optional(),
+  extractedData: z.record(z.string(), z.unknown()).optional(),
   isComplete: z.boolean(),
   nextQuestion: z.string().optional(),
 })
@@ -323,7 +323,7 @@ export async function sendMessage(data: unknown) {
         conversationId: conversation.id,
         role: 'ASSISTANT',
         content: aiResponse.message,
-        extractedData: aiResponse.extractedData || {},
+        extractedData: (aiResponse.extractedData || {}) as any,
         model: 'gpt-4o-mini',
         promptTokens: response.usage?.prompt_tokens || 0,
         responseTokens: response.usage?.completion_tokens || 0,
@@ -363,7 +363,7 @@ async function getExtractedData(conversationId: string): Promise<Record<string, 
     where: {
       conversationId,
       role: 'ASSISTANT',
-      extractedData: { not: null },
+      extractedData: { not: null as any },
     },
     orderBy: { createdAt: 'asc' },
     select: { extractedData: true },
@@ -464,11 +464,11 @@ export async function generateContractFromConversation(data: unknown) {
 
     // Map extracted data to GenerateContractInput format
     const contractInput: GenerateContractInput = {
-      contractTypeEnum: conversation.contractType,
+      contractTypeEnum: conversation.contractType as any,
       contractType: conversation.contractType.replace('_', ' '),
       jurisdiction: String(extractedData.jurisdiction || 'United States'),
-      tone: String(extractedData.tone || 'neutral'),
-      riskPosture: String(extractedData.riskPosture || 'balanced'),
+      tone: String(extractedData.tone || 'neutral') as any,
+      riskPosture: String(extractedData.riskPosture || 'balanced') as any,
       venueName: extractedData.venueName ? String(extractedData.venueName) : undefined,
       clientName: extractedData.clientName ? String(extractedData.clientName) : undefined,
       eventDate: extractedData.eventDate ? String(extractedData.eventDate) : undefined,

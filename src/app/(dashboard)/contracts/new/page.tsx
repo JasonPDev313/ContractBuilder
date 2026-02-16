@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default async function NewContractPage() {
   const result = await getTemplates()
-  const templates = result.success ? result.templates : []
+  const templates = (result.success ? result.templates : []) || []
 
   return (
     <div className="max-w-4xl space-y-6">

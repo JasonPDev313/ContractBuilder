@@ -61,7 +61,7 @@ export function VariableInputForm({
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<FormData>({
-    resolver: zodResolver(createContractFromTemplateSchema),
+    resolver: zodResolver(createContractFromTemplateSchema) as any,
     defaultValues: {
       templateId,
       title: '',
@@ -85,7 +85,7 @@ export function VariableInputForm({
     Object.entries(watchedVariables || {}).forEach(([key, value]) => {
       if (value) {
         const pattern = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
-        result = result.replace(pattern, value)
+        result = result.replace(pattern, String(value))
       }
     })
     return result
@@ -188,6 +188,7 @@ export function VariableInputForm({
                         <Input
                           placeholder={`Enter ${variable.replace(/_/g, ' ')}`}
                           {...field}
+                          value={String(field.value || '')}
                         />
                       </FormControl>
                       <FormMessage />

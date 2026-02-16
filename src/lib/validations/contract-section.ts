@@ -37,7 +37,7 @@ export const createContractFromTemplateSchema = z.object({
     .min(1, 'Contract title is required')
     .max(200, 'Contract title must be less than 200 characters'),
   description: z.string().optional(),
-  variables: z.record(z.string()).optional(),
+  variables: z.record(z.string(), z.string()).optional(),
   expiresAt: z
     .string()
     .datetime()

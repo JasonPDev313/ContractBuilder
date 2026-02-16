@@ -18,7 +18,7 @@ export default async function SentContractsPage() {
         </p>
       </div>
 
-      <SentContractsList contracts={result.contracts} />
+      <SentContractsList contracts={result.contracts || []} />
     </div>
   )
 }

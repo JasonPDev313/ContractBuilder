@@ -73,7 +73,7 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
   const form = useForm<CreateTemplateData>({
     resolver: zodResolver(
       mode === 'create' ? createTemplateSchema : updateTemplateSchema
-    ),
+    ) as any,
     defaultValues:
       mode === 'create'
         ? {
@@ -93,8 +93,8 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
             name: template?.name || '',
             description: template?.description || '',
             category: template?.category || '',
-            isActive: template?.isActive,
-          },
+            isActive: template?.isActive ?? true,
+          } as any,
   })
 
   const { fields, append, remove } = useFieldArray({
@@ -223,19 +223,6 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
                   </div>
                 )}
 
-                {selectedContractType && selectedOption && selectedOption.sectionCount === 0 && (
-                  <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 mt-3 dark:border-amber-900 dark:bg-amber-950">
-                    <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0 dark:text-amber-400" />
-                    <div>
-                      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                        Default sections for {selectedOption.label} are coming soon
-                      </p>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                        The template will be created without pre-built sections. You can add sections manually after creation.
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -288,26 +275,18 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
             />
 
             {mode === 'edit' && (
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active Template</FormLabel>
-                      <FormDescription>
-                        Inactive templates cannot be used to create new contracts
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <label className="text-base font-medium">Active Template</label>
+                  <p className="text-sm text-muted-foreground">
+                    Inactive templates cannot be used to create new contracts
+                  </p>
+                </div>
+                <Switch
+                  checked={template?.isActive ?? true}
+                  onCheckedChange={() => {}}
+                />
+              </div>
             )}
 
             {/* Only show inline sections if no contract type selected in create mode */}

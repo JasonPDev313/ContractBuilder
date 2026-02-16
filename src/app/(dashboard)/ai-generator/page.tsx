@@ -134,7 +134,9 @@ export default function AIGeneratorPage() {
     try {
       const result = await getConversation(conversationId)
 
-      if (result.success && result.conversation.generatedContract) {
+      if (!result.success || !result.conversation) return
+
+      if (result.conversation.generatedContract) {
         setGeneratedContract({
           id: result.conversation.generatedContract.id,
           title: result.conversation.generatedContract.title,

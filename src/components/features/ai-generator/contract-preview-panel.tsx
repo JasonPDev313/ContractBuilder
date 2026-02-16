@@ -138,7 +138,7 @@ export function ContractPreviewPanel({
 
   // Get the default sections for the contract type
   const defaultSections = useMemo(() => {
-    return getDefaultSections(contractType) || []
+    return contractType ? getDefaultSections(contractType) || [] : []
   }, [contractType])
 
   // Execution validation

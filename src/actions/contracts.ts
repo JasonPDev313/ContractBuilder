@@ -153,8 +153,9 @@ export async function createContractFromTemplate(data: unknown) {
   }
 
   // Replace variables in section bodies
-  const replaceVariables = (text: string, variables: Record<string, string> = {}) => {
+  const replaceVariables = (text: string, variables?: Record<string, string>) => {
     let result = text
+    if (!variables) return result
     for (const [key, value] of Object.entries(variables)) {
       const pattern = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
       result = result.replace(pattern, value)
@@ -181,7 +182,7 @@ export async function createContractFromTemplate(data: unknown) {
     const sectionsData = template.sections.map((section) => ({
       contractId: newContract.id,
       title: section.title,
-      body: replaceVariables(section.body, validatedData.variables),
+      body: replaceVariables(section.body, validatedData.variables as Record<string, string> | undefined),
       order: section.order,
       isEdited: false,
       originalTemplateSectionId: section.id,

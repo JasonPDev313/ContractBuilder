@@ -26,7 +26,7 @@ export default async function EditContractPage({
     // Check if this is a section-based contract (created from template)
     const sectionsResult = await getContractSections(id)
     const isSectionBased =
-      sectionsResult.success && sectionsResult.sections.length > 0
+      sectionsResult.success && (sectionsResult.sections?.length ?? 0) > 0
 
     if (isSectionBased && sectionsResult.sections) {
       // Fetch extracted data from the AI conversation (if any)
@@ -47,7 +47,7 @@ export default async function EditContractPage({
       // Legacy content-based contract editing
       return (
         <div className="max-w-2xl">
-          <ContractForm contract={contract} mode="edit" />
+          <ContractForm contract={contract as any} mode="edit" />
         </div>
       )
     }

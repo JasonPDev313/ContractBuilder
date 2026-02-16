@@ -304,9 +304,9 @@ export async function suggestContractLanguage(data: unknown) {
         estimatedCostCents,
       },
       limits: {
-        dailyUsage: rateLimit.dailyUsage + 1,
+        dailyUsage: (rateLimit.dailyUsage ?? 0) + 1,
         dailyLimit: rateLimit.dailyLimit,
-        monthlyUsage: rateLimit.monthlyUsage + 1,
+        monthlyUsage: (rateLimit.monthlyUsage ?? 0) + 1,
         monthlyLimit: rateLimit.monthlyLimit,
       },
     }

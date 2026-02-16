@@ -12,6 +12,7 @@ interface Contract {
   status: string
   createdAt: Date
   expiresAt: Date | null
+  content?: string | null
   sections: Array<{
     id: string
     title: string
