@@ -3,6 +3,8 @@ import { TemplateSelector } from '@/components/features/contracts/template-selec
 import { getTemplates } from '@/actions/templates'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+export const dynamic = 'force-dynamic'
+
 export default async function NewContractPage() {
   const result = await getTemplates()
   const templates = (result.success ? result.templates : []) || []
