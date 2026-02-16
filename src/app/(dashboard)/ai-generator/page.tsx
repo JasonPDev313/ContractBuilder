@@ -16,7 +16,9 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, RotateCcw, Sparkles } from 'lucide-react'
+import { Loader2, RotateCcw, Sparkles, MessageSquare, FileText, ClipboardEdit, Save } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { checkFieldCompleteness, validateContractForExecution, getMissingFields } from '@/lib/contract-fields'
 import { createConversation, getConversation } from '@/actions/ai-conversations'
 import { toast } from '@/hooks/use-toast'
 import { type ContractType } from '@/lib/contract-blueprints'
@@ -69,6 +71,7 @@ const QUICK_START_SUGGESTIONS = [
 ]
 
 export default function AIGeneratorPage() {
+  const router = useRouter()
   const [selectedType, setSelectedType] = useState<ContractType | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -90,6 +93,7 @@ export default function AIGeneratorPage() {
   const [showBulkFill, setShowBulkFill] = useState(false)
   const [bulkFillTab, setBulkFillTab] = useState<'required' | 'recommended' | 'optional' | 'all'>('required')
   const [quickStartPrompt, setQuickStartPrompt] = useState<string | null>(null)
+  const [mobileTab, setMobileTab] = useState<'chat' | 'contract'>('chat')
 
   const initializeConversation = async (contractType: ContractType) => {
     setIsLoading(true)
@@ -174,10 +178,18 @@ export default function AIGeneratorPage() {
     }
   }, [conversationId, quickStartPrompt, isLoading])
 
+  // Compute mobile action bar data
+  const essentialFields = getEssentialFields(selectedType || undefined)
+  const { completedCount, totalCount } = selectedType
+    ? checkFieldCompleteness(selectedType, extractedData)
+    : { completedCount: 0, totalCount: essentialFields.length }
+  const executionValidation = validateContractForExecution(selectedType || undefined, extractedData)
+  const missingFields = getMissingFields(selectedType || undefined, extractedData)
+
   // Show contract type selection screen
   if (!conversationId) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center p-6">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center p-4 md:p-6">
         <Card className="w-full max-w-2xl">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -292,41 +304,99 @@ export default function AIGeneratorPage() {
     )
   }
 
+  // Shared panel refs
+  const chatPanel = (
+    <ChatInterface
+      conversationId={conversationId}
+      initialMessages={messages}
+      onExtractedDataUpdate={setExtractedData}
+      onReadyToGenerate={setIsReadyToGenerate}
+      externalMessage={pendingChatMessage}
+      onExternalMessageSent={() => setPendingChatMessage(null)}
+    />
+  )
+
+  const previewPanel = (
+    <ContractPreviewPanel
+      conversationId={conversationId}
+      contractType={selectedType || undefined}
+      extractedData={extractedData}
+      isReadyToGenerate={isReadyToGenerate}
+      generatedContract={generatedContract || undefined}
+      onGenerateComplete={handleGenerateComplete}
+      onSendMessage={(msg) => {
+        setPendingChatMessage(msg)
+        setMobileTab('chat')
+      }}
+      onOpenBulkFill={(tab) => {
+        setBulkFillTab(tab || 'required')
+        setShowBulkFill(true)
+      }}
+      onSaveAsTemplate={() => setShowTemplateDialog(true)}
+      hideBottomActions
+    />
+  )
+
   // Main conversation interface
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-4 space-y-3">
+      <div className="border-b bg-background px-4 py-3 md:px-6 md:py-4 space-y-2 md:space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">AI Template Builder</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-xl md:text-2xl font-bold">AI Template Builder</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {CONTRACT_TYPE_OPTIONS.find((opt) => opt.value === selectedType)?.label} Contract
             </p>
           </div>
-          <Button variant="outline" onClick={handleStartOver} disabled={isLoading}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Start Over
+          <Button variant="outline" size="sm" onClick={handleStartOver} disabled={isLoading}>
+            <RotateCcw className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Start Over</span>
           </Button>
         </div>
-        <LegalDisclaimer />
+        <div className="hidden md:block">
+          <LegalDisclaimer />
+        </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="flex-1 grid grid-cols-[1fr_400px] lg:grid-cols-[1fr_500px] overflow-hidden">
-        {/* Left: Chat Interface */}
-        <div className="border-r h-full overflow-hidden">
-          <ChatInterface
-            conversationId={conversationId}
-            initialMessages={messages}
-            onExtractedDataUpdate={setExtractedData}
-            onReadyToGenerate={setIsReadyToGenerate}
-            externalMessage={pendingChatMessage}
-            onExternalMessageSent={() => setPendingChatMessage(null)}
-          />
+      {/* Mobile: Tab bar */}
+      <div className="md:hidden border-b bg-background">
+        <div className="grid grid-cols-2">
+          <button
+            className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              mobileTab === 'chat'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground'
+            }`}
+            onClick={() => setMobileTab('chat')}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Chat
+          </button>
+          <button
+            className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              mobileTab === 'contract'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground'
+            }`}
+            onClick={() => setMobileTab('contract')}
+          >
+            <FileText className="h-4 w-4" />
+            Contract
+            {missingFields.required.length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+                {missingFields.required.length}
+              </span>
+            )}
+          </button>
         </div>
+      </div>
 
-        {/* Right: Preview Panel */}
+      {/* Desktop: Two-column layout */}
+      <div className="flex-1 hidden md:grid md:grid-cols-[1fr_400px] lg:grid-cols-[1fr_500px] overflow-hidden">
+        <div className="border-r h-full overflow-hidden">
+          {chatPanel}
+        </div>
         <div className="bg-muted/20 h-full overflow-hidden">
           <ContractPreviewPanel
             conversationId={conversationId}
@@ -345,6 +415,74 @@ export default function AIGeneratorPage() {
         </div>
       </div>
 
+      {/* Mobile: Tab content */}
+      <div className="flex-1 md:hidden overflow-hidden pb-16">
+        <div className={`h-full overflow-hidden ${mobileTab === 'chat' ? 'block' : 'hidden'}`}>
+          {chatPanel}
+        </div>
+        <div className={`h-full overflow-hidden bg-muted/20 ${mobileTab === 'contract' ? 'block' : 'hidden'}`}>
+          {previewPanel}
+        </div>
+      </div>
+
+      {/* Mobile: Sticky bottom action bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t px-4 py-3" style={{ zIndex: 40 }}>
+        {generatedContract ? (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => router.push(`/contracts/${generatedContract.id}`)}
+              className="flex-1"
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Save Draft
+            </Button>
+            <Button
+              onClick={() => setShowTemplateDialog(true)}
+              variant="outline"
+              className="flex-1"
+              size="sm"
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Template
+            </Button>
+          </div>
+        ) : mobileTab === 'chat' ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 text-xs text-muted-foreground">
+              {completedCount}/{totalCount} fields
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setMobileTab('contract')}>
+              View Contract
+              <FileText className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                setBulkFillTab(missingFields.required.length > 0 ? 'required' : 'recommended')
+                setShowBulkFill(true)
+              }}
+            >
+              <ClipboardEdit className="h-4 w-4 mr-1" />
+              Fill Fields
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => setMobileTab('contract')}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              Generate
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Save as Template Dialog */}
       {generatedContract && (
         <SaveAsTemplateDialog
@@ -358,7 +496,7 @@ export default function AIGeneratorPage() {
       <BulkFillModal
         open={showBulkFill}
         onOpenChange={setShowBulkFill}
-        fields={getEssentialFields(selectedType || undefined)}
+        fields={essentialFields}
         extractedData={extractedData}
         initialTab={bulkFillTab}
         onSave={(data) => {

@@ -195,7 +195,7 @@ export function ChatInterface({
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
         {messages.map((message) => (
           <MessageBubble
             key={message.id}
@@ -211,22 +211,22 @@ export function ChatInterface({
       </div>
 
       {/* Input area */}
-      <div className="border-t bg-background p-4">
+      <div className="border-t bg-background p-3 md:p-4">
         <div className="flex gap-2">
           <Textarea
             ref={textareaRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message... (Shift+Enter for new line)"
-            className="min-h-[60px] max-h-[200px] resize-none"
+            placeholder="Type your message..."
+            className="min-h-[44px] md:min-h-[60px] max-h-[200px] resize-none"
             disabled={isLoading}
           />
           <Button
             onClick={handleSend}
             disabled={!inputValue.trim() || isLoading}
             size="icon"
-            className="h-[60px] w-[60px] flex-shrink-0"
+            className="h-[44px] w-[44px] md:h-[60px] md:w-[60px] flex-shrink-0"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -235,7 +235,7 @@ export function ChatInterface({
             )}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground mt-1.5 hidden md:block">
           Press Enter to send, Shift+Enter for new line
         </p>
       </div>

@@ -67,6 +67,7 @@ interface ContractPreviewPanelProps {
   onSendMessage?: (message: string) => void
   onOpenBulkFill?: (tab?: 'required' | 'recommended' | 'optional' | 'all') => void
   onSaveAsTemplate?: () => void
+  hideBottomActions?: boolean
 }
 
 function VariableText({
@@ -114,6 +115,7 @@ export function ContractPreviewPanel({
   onSendMessage,
   onOpenBulkFill,
   onSaveAsTemplate,
+  hideBottomActions,
 }: ContractPreviewPanelProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('preview')
@@ -227,8 +229,8 @@ export function ContractPreviewPanel({
   if (generatedContract) {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-bold mb-2">{generatedContract.title}</h2>
+        <div className="p-4 md:p-6 border-b">
+          <h2 className="text-xl md:text-2xl font-bold mb-2">{generatedContract.title}</h2>
           {contractType && (
             <Badge variant="secondary" className="mb-4">
               {contractType.replace('_', ' ')}
@@ -259,21 +261,23 @@ export function ContractPreviewPanel({
           </Accordion>
         </div>
 
-        <div className="p-6 border-t space-y-2">
-          <Button onClick={handleSaveDraft} className="w-full" size="lg">
-            <Save className="h-4 w-4 mr-2" />
-            Save as Draft
-          </Button>
-          <Button
-            onClick={handleSaveAsTemplate}
-            variant="outline"
-            className="w-full"
-            size="lg"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Save as Template
-          </Button>
-        </div>
+        {!hideBottomActions && (
+          <div className="p-4 md:p-6 border-t space-y-2">
+            <Button onClick={handleSaveDraft} className="w-full" size="lg">
+              <Save className="h-4 w-4 mr-2" />
+              Save as Draft
+            </Button>
+            <Button
+              onClick={handleSaveAsTemplate}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Save as Template
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
@@ -281,7 +285,7 @@ export function ContractPreviewPanel({
   return (
     <div className="h-full flex flex-col">
       {/* Header with view toggle */}
-      <div className="p-4 border-b space-y-3">
+      <div className="p-3 md:p-4 border-b space-y-2 md:space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Contract Details</h3>
@@ -358,7 +362,7 @@ export function ContractPreviewPanel({
       </div>
 
       {/* Missing Fields Panel + Generate button */}
-      <div className="border-t">
+      {hideBottomActions ? null : <div className="border-t">
         {totalMissing > 0 && (
           <div className="px-4 pt-3">
             <div className={`rounded-lg border p-3 ${
@@ -544,7 +548,7 @@ export function ContractPreviewPanel({
             </p>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
