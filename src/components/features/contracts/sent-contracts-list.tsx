@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -81,7 +82,9 @@ const statusColors: Record<string, string> = {
 }
 
 export function SentContractsList({ contracts }: SentContractsListProps) {
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const initialStatus = searchParams.get('status') || 'all'
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus)
   const [emailFilter, setEmailFilter] = useState<string>('')
 
   const filteredContracts = contracts.filter((contract) => {

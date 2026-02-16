@@ -1,10 +1,10 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -40,24 +40,28 @@ export default async function DashboardPage() {
       value: totalContracts,
       description: 'All contracts created',
       icon: FileText,
+      href: '/contracts/sent',
     },
     {
       title: 'Drafts',
       value: draftContracts,
       description: 'Contracts in draft status',
       icon: FileEdit,
+      href: '/contracts?status=DRAFT',
     },
     {
       title: 'Sent',
       value: sentContracts,
       description: 'Contracts sent for signature',
       icon: Send,
+      href: '/contracts/sent?status=SENT',
     },
     {
       title: 'Completed',
       value: completedContracts,
       description: 'Fully signed contracts',
       icon: CheckCircle,
+      href: '/contracts/sent?status=COMPLETED',
     },
   ]
 
@@ -73,20 +77,22 @@ export default async function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
+            <Link key={stat.title} href={stat.href}>
+              <Card className="transition-colors hover:bg-muted/50 cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           )
         })}
       </div>

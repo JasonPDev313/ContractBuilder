@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { getSentContracts } from '@/actions/contract-delivery'
 import { SentContractsList } from '@/components/features/contracts/sent-contracts-list'
 import { AutoRefresh } from '@/components/auto-refresh'
@@ -17,7 +18,9 @@ export default async function SentContractsPage() {
         </p>
       </div>
 
-      <SentContractsList contracts={result.contracts || []} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <SentContractsList contracts={result.contracts || []} />
+      </Suspense>
     </div>
   )
 }
