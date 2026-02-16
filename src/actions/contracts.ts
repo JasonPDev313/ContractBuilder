@@ -6,6 +6,7 @@ import { contractSchema, sendContractSchema } from '@/lib/validations/contract'
 import { createContractFromTemplateSchema } from '@/lib/validations/contract-section'
 import { auth } from '@/lib/auth'
 import { getSessionOrgId, requireAuth } from '@/lib/auth-utils'
+import { getApplicableVenuePolicies, buildVenuePoliciesSectionBody } from '@/lib/venue-policies'
 
 export async function getContracts() {
   const session = await auth()
@@ -191,6 +192,40 @@ export async function createContractFromTemplate(data: unknown) {
     await tx.contractSection.createMany({
       data: sectionsData,
     })
+
+    // Inject Venue Policies for templates created before this feature
+    const hasVenuePolicies = template.sections.some((s) =>
+      s.title.toLowerCase().includes('venue policies')
+    )
+
+    if (!hasVenuePolicies && template.contractType) {
+      const orgDefaults = await tx.orgContractDefaults.findUnique({
+        where: { organizationId: orgId },
+      })
+      const policies = getApplicableVenuePolicies(orgDefaults, template.contractType)
+
+      if (policies.length > 0) {
+        const body = buildVenuePoliciesSectionBody(policies)
+        const maxOrder = Math.max(...sectionsData.map((s) => s.order), 0)
+        // Insert before last 2 sections (Governing Law, Entire Agreement typically)
+        const insertOrder = Math.max(maxOrder - 1, 0)
+
+        await tx.contractSection.updateMany({
+          where: { contractId: newContract.id, order: { gte: insertOrder } },
+          data: { order: { increment: 1 } },
+        })
+
+        await tx.contractSection.create({
+          data: {
+            contractId: newContract.id,
+            title: 'Venue Policies',
+            body,
+            order: insertOrder,
+            isEdited: false,
+          },
+        })
+      }
+    }
 
     // Increment template usage count
     await tx.contractTemplate.update({

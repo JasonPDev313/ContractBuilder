@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+const contractTypeArray = z
+  .array(z.enum(['GOLF_OUTING', 'GOLF_LEAGUE', 'WEDDING', 'SPECIAL_EVENT', 'OTHER']))
+  .optional()
+  .nullable()
+
 export const upsertOrgDefaultsSchema = z.object({
   // Venue info
   venueName: z.string().max(200).optional().nullable(),
@@ -24,8 +29,11 @@ export const upsertOrgDefaultsSchema = z.object({
 
   // Policy defaults
   defaultWeatherPolicy: z.string().max(5000).optional().nullable(),
+  weatherPolicyAppliesTo: contractTypeArray,
   defaultAlcoholPolicy: z.string().max(5000).optional().nullable(),
+  alcoholPolicyAppliesTo: contractTypeArray,
   defaultLiabilityTerms: z.string().max(5000).optional().nullable(),
+  liabilityTermsAppliesTo: contractTypeArray,
 
   // Custom policies (unlimited)
   customPolicies: z
@@ -33,6 +41,7 @@ export const upsertOrgDefaultsSchema = z.object({
       z.object({
         name: z.string().min(1).max(200),
         content: z.string().min(1).max(5000),
+        appliesTo: contractTypeArray,
       })
     )
     .optional()

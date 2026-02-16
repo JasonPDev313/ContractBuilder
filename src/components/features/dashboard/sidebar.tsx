@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, FileText, FileStack, Send, Settings, Sparkles } from 'lucide-react'
+import { Home, FileText, FileStack, Send, Settings, Sparkles, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const routes = [
@@ -27,6 +27,11 @@ const routes = [
     label: 'Sent Contracts',
     icon: Send,
     href: '/contracts/sent',
+  },
+  {
+    label: 'Team',
+    icon: Users,
+    href: '/settings/users',
   },
   {
     label: 'Settings',

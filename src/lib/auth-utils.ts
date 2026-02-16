@@ -71,3 +71,20 @@ export function requireAuth(session: Session | null): Session {
   }
   return session
 }
+
+/**
+ * Check if the user has one of the specified roles.
+ */
+export function hasRole(session: Session, ...roles: string[]): boolean {
+  return roles.includes(session?.user?.role)
+}
+
+/**
+ * Require admin or manager privileges.
+ * Throws an error if the user is neither an admin nor a manager.
+ */
+export function requireAdminOrManager(session: Session): void {
+  if (!hasRole(session, 'ADMIN', 'MANAGER')) {
+    throw new Error('Admin or Manager privileges required')
+  }
+}

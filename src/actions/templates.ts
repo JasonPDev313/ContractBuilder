@@ -18,6 +18,7 @@ import {
 } from '@/lib/validations/template'
 import { getDefaultSections } from '@/lib/default-template-sections'
 import type { ContractType } from '@/lib/contract-blueprints'
+import { getApplicableVenuePolicies, buildVenuePoliciesSectionBody } from '@/lib/venue-policies'
 import type { Prisma } from '@prisma/client'
 
 /**
@@ -196,6 +197,50 @@ export async function createTemplate(data: CreateTemplateInput) {
               variables: extractVariables(s.body),
             })),
           })
+        }
+
+        // Inject Venue Policies section from org defaults
+        if (validated.contractType) {
+          const orgDefaults = await tx.orgContractDefaults.findUnique({
+            where: { organizationId: orgId },
+          })
+
+          const policies = getApplicableVenuePolicies(orgDefaults, validated.contractType)
+
+          if (policies.length > 0) {
+            const venuePoliciesBody = buildVenuePoliciesSectionBody(policies)
+
+            // Find the Governing Law section to insert before it
+            const allSections = await tx.templateSection.findMany({
+              where: { templateId: tmpl.id },
+              orderBy: { order: 'asc' },
+            })
+            const governingLawSection = allSections.find((s) =>
+              s.title.toLowerCase().includes('governing law')
+            )
+            const insertOrder = governingLawSection
+              ? governingLawSection.order
+              : allSections.length
+
+            // Shift sections at or after insertOrder
+            await tx.templateSection.updateMany({
+              where: { templateId: tmpl.id, order: { gte: insertOrder } },
+              data: { order: { increment: 1 } },
+            })
+
+            await tx.templateSection.create({
+              data: {
+                templateId: tmpl.id,
+                title: 'Venue Policies',
+                body: venuePoliciesBody,
+                order: insertOrder,
+                isRequired: false,
+                isDefault: true,
+                isIncluded: true,
+                variables: [],
+              },
+            })
+          }
         }
 
         return tx.contractTemplate.findUnique({

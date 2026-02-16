@@ -88,12 +88,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      if (trigger === 'update') {
+      // Always refresh role and org from DB to pick up changes (role updates, org moves)
+      if (!user && token.sub) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: token.sub as string },
-          select: { organizationId: true },
+          where: { id: token.sub },
+          select: { role: true, organizationId: true },
         })
-        token.organizationId = dbUser?.organizationId || null
+        if (dbUser) {
+          token.role = dbUser.role
+          token.organizationId = dbUser.organizationId
+        }
       }
 
       return token

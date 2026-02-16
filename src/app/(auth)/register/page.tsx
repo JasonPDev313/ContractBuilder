@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -29,6 +29,8 @@ import { toast } from '@/hooks/use-toast'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get('invite')
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<RegisterInput>({
@@ -44,7 +46,7 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const result = await registerAction(data)
+      const result = await registerAction(data, inviteToken || undefined)
 
       if (result.success) {
         toast({

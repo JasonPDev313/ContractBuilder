@@ -16,6 +16,7 @@ import {
   normalizeAndOrderSections,
   mergeExhibits,
 } from '@/lib/contract-section-ordering'
+import { getApplicableVenuePolicies, buildVenuePoliciesSectionBody } from '@/lib/venue-policies'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
@@ -269,6 +270,49 @@ export async function generateContractFromPrompt(data: unknown) {
           isEdited: false,
         })),
       })
+
+      // Inject Venue Policies section from org defaults
+      const existingVP = orderedSections.find((s) =>
+        s.title.toLowerCase().includes('venue policies')
+      )
+
+      if (!existingVP) {
+        const orgDefaults = await tx.orgContractDefaults.findUnique({
+          where: { organizationId: orgId },
+        })
+
+        const policies = getApplicableVenuePolicies(
+          orgDefaults,
+          validatedInput.contractTypeEnum
+        )
+
+        if (policies.length > 0) {
+          const venuePoliciesBody = buildVenuePoliciesSectionBody(policies)
+
+          const governingLaw = orderedSections.find((s) =>
+            s.title.toLowerCase().includes('governing law')
+          )
+          const insertOrder = governingLaw
+            ? governingLaw.order
+            : orderedSections.length
+
+          // Shift existing sections
+          await tx.contractSection.updateMany({
+            where: { contractId: newContract.id, order: { gte: insertOrder } },
+            data: { order: { increment: 1 } },
+          })
+
+          await tx.contractSection.create({
+            data: {
+              contractId: newContract.id,
+              title: 'Venue Policies',
+              body: venuePoliciesBody,
+              order: insertOrder,
+              isEdited: false,
+            },
+          })
+        }
+      }
 
       // Log event
       await tx.contractEvent.create({
