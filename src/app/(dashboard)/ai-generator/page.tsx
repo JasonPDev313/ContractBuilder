@@ -185,7 +185,7 @@ export default function AIGeneratorPage() {
                 <Sparkles className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-2xl">AI Contract Generator</CardTitle>
+                <CardTitle className="text-2xl">AI Template Builder</CardTitle>
                 <CardDescription className="mt-1">
                   Create professional contracts through conversation
                 </CardDescription>
@@ -299,7 +299,7 @@ export default function AIGeneratorPage() {
       <div className="border-b bg-background px-6 py-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">AI Contract Generator</h1>
+            <h1 className="text-2xl font-bold">AI Template Builder</h1>
             <p className="text-sm text-muted-foreground">
               {CONTRACT_TYPE_OPTIONS.find((opt) => opt.value === selectedType)?.label} Contract
             </p>

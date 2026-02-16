@@ -14,7 +14,7 @@ const routes = [
     href: '/contracts',
   },
   {
-    label: 'AI Contract Generator',
+    label: 'AI Template Builder',
     icon: Sparkles,
     href: '/ai-generator',
   },
