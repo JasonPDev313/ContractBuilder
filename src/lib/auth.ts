@@ -58,7 +58,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { id: user.id },
           select: { organizationId: true },
         })
-        token.organizationId = dbUser?.organizationId || null
+
+        // Auto-create org for legacy users who don't have one
+        if (!dbUser?.organizationId) {
+          const email = (user.email || 'user').split('@')[0]
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .slice(0, 50)
+          const org = await prisma.organization.create({
+            data: {
+              name: user.name ? `${user.name}'s Organization` : 'My Organization',
+              slug: `${email}-${Date.now().toString(36)}`,
+              plan: 'FREE',
+            },
+          })
+          await prisma.user.update({
+            where: { id: user.id! },
+            data: { organizationId: org.id },
+          })
+          token.organizationId = org.id
+        } else {
+          token.organizationId = dbUser.organizationId
+        }
       }
 
       if (trigger === 'update') {

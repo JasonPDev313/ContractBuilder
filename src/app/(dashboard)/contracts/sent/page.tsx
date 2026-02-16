@@ -1,16 +1,11 @@
 import { getSentContracts } from '@/actions/contract-delivery'
 import { SentContractsList } from '@/components/features/contracts/sent-contracts-list'
 import { AutoRefresh } from '@/components/auto-refresh'
-import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SentContractsPage() {
   const result = await getSentContracts()
-
-  if (!result.success) {
-    notFound()
-  }
 
   return (
     <div className="max-w-7xl space-y-6">
