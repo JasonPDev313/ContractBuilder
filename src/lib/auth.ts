@@ -2,15 +2,10 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import { compare } from 'bcryptjs'
+import { authConfig } from './auth.config'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: {
-    strategy: 'jwt',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: '/login',
-  },
+  ...authConfig,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -50,16 +45,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user, trigger }) {
       if (user) {
-        // When user logs in, add custom properties to token
-        token.sub = user.id // Standard NextAuth property for user ID
+        token.sub = user.id
         token.id = user.id
         token.email = user.email
         token.name = user.name
         token.role = (user as any).role
 
-        // Fetch organizationId from database
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { organizationId: true },
@@ -67,7 +61,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.organizationId = dbUser?.organizationId || null
       }
 
-      // Support updating organizationId without re-login
       if (trigger === 'update') {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub as string },
@@ -79,7 +72,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      // Construct session from token properties
       if (session.user) {
         session.user.id = token.sub as string
         session.user.email = token.email as string
@@ -88,21 +80,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.organizationId = token.organizationId as string | null
       }
       return session
-    },
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user
-      const isOnDashboard = nextUrl.pathname.startsWith('/dashboard')
-      const isOnContracts = nextUrl.pathname.startsWith('/contracts')
-      const isOnAuth = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/register')
-
-      if (isOnDashboard || isOnContracts) {
-        if (isLoggedIn) return true
-        return false // Redirect to login
-      } else if (isOnAuth) {
-        if (isLoggedIn) return Response.redirect(new URL('/dashboard', nextUrl))
-      }
-
-      return true
     },
   },
 })
