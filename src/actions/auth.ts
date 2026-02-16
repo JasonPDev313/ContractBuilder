@@ -24,12 +24,28 @@ export async function register(data: unknown) {
     // Hash password
     const hashedPassword = await hash(validatedData.password, 10)
 
-    // Create user
+    // Get or create default organization
+    let defaultOrg = await prisma.organization.findUnique({
+      where: { slug: 'default' },
+    })
+
+    if (!defaultOrg) {
+      defaultOrg = await prisma.organization.create({
+        data: {
+          name: 'Default Organization',
+          slug: 'default',
+          plan: 'FREE',
+        },
+      })
+    }
+
+    // Create user and assign to default organization
     await prisma.user.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
+        organizationId: defaultOrg.id,
       },
     })
 

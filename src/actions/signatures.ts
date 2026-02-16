@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { signContractSchema, type SignatureData } from '@/lib/validations/signature'
+import { strokesToSvgPath } from '@/lib/signature-utils'
 
 export async function getSignatureByToken(token: string) {
   const signature = await prisma.signature.findUnique({
@@ -9,6 +11,19 @@ export async function getSignatureByToken(token: string) {
     include: {
       contract: {
         include: {
+          sections: {
+            orderBy: { order: 'asc' as const },
+          },
+          signatures: {
+            select: {
+              id: true,
+              signerName: true,
+              signerEmail: true,
+              status: true,
+              signedAt: true,
+              signatureSvg: true,
+            },
+          },
           createdBy: {
             select: {
               name: true,
@@ -24,12 +39,12 @@ export async function getSignatureByToken(token: string) {
     throw new Error('Signature not found')
   }
 
-  if (signature.status !== 'PENDING') {
-    throw new Error('This signature request has already been processed')
-  }
-
   // Check if expired
-  if (signature.contract.expiresAt && new Date(signature.contract.expiresAt) < new Date()) {
+  if (
+    signature.status === 'PENDING' &&
+    signature.contract.expiresAt &&
+    new Date(signature.contract.expiresAt) < new Date()
+  ) {
     await prisma.signature.update({
       where: { id: signature.id },
       data: { status: 'EXPIRED' },
@@ -42,13 +57,18 @@ export async function getSignatureByToken(token: string) {
 
 export async function signContract({
   token,
+  signatureData,
   ipAddress,
   userAgent,
 }: {
   token: string
+  signatureData: SignatureData
   ipAddress?: string
   userAgent?: string
 }) {
+  // Validate input
+  signContractSchema.parse({ token, signatureData, ipAddress, userAgent })
+
   const signature = await prisma.signature.findUnique({
     where: { token },
     include: {
@@ -68,7 +88,10 @@ export async function signContract({
     throw new Error('This signature request has already been processed')
   }
 
-  // Update signature
+  // Generate SVG path from stroke data
+  const signatureSvg = strokesToSvgPath(signatureData.strokes)
+
+  // Update signature with drawn signature data
   await prisma.signature.update({
     where: { id: signature.id },
     data: {
@@ -76,6 +99,8 @@ export async function signContract({
       signedAt: new Date(),
       ipAddress,
       userAgent,
+      signatureData: signatureData as any,
+      signatureSvg,
     },
   })
 

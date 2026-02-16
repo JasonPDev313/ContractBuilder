@@ -1,14 +1,13 @@
 import NextAuth from 'next-auth'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import { compare } from 'bcryptjs'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
   },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
   },
@@ -59,7 +58,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.email = user.email
         token.name = user.name
         token.role = (user as any).role
+
+        // Fetch organizationId from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { organizationId: true },
+        })
+        token.organizationId = dbUser?.organizationId || null
       }
+
+      // Support updating organizationId without re-login
+      if (trigger === 'update') {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub as string },
+          select: { organizationId: true },
+        })
+        token.organizationId = dbUser?.organizationId || null
+      }
+
       return token
     },
     async session({ session, token }) {
@@ -69,6 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.email = token.email as string
         session.user.name = token.name as string
         session.user.role = token.role as string
+        session.user.organizationId = token.organizationId as string | null
       }
       return session
     },

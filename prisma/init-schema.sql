@@ -1,4 +1,4 @@
--- FormBuilder Database Schema
+-- Contract Caddie Contract Management System Database Schema
 -- Run this in Supabase SQL Editor
 
 -- Create enums

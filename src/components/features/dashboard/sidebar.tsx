@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, FileText } from 'lucide-react'
+import { Home, FileText, FileStack, Send, Settings, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const routes = [
@@ -9,9 +9,29 @@ const routes = [
     href: '/dashboard',
   },
   {
-    label: 'Contracts',
+    label: 'Generate Contract',
     icon: FileText,
     href: '/contracts',
+  },
+  {
+    label: 'AI Contract Generator',
+    icon: Sparkles,
+    href: '/ai-generator',
+  },
+  {
+    label: 'Contract Templates',
+    icon: FileStack,
+    href: '/templates',
+  },
+  {
+    label: 'Sent Contracts',
+    icon: Send,
+    href: '/contracts/sent',
+  },
+  {
+    label: 'Settings',
+    icon: Settings,
+    href: '/settings/contracts',
   },
 ]
 

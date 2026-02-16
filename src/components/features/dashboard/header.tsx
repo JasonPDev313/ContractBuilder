@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { UserNav } from './user-nav'
 import { FileText } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export async function Header() {
   const session = await auth()
@@ -11,10 +12,11 @@ export async function Header() {
         <div className="mr-4 flex items-center space-x-2">
           <FileText className="h-6 w-6" />
           <span className="hidden font-bold sm:inline-block">
-            FormBuilder
+            Contract Caddie
           </span>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
+          <ThemeToggle />
           {session?.user && <UserNav user={session.user} />}
         </div>
       </div>

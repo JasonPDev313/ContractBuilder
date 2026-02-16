@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { contractSchema, sendContractSchema } from '@/lib/validations/contract'
+import { createContractFromTemplateSchema } from '@/lib/validations/contract-section'
 import { auth } from '@/lib/auth'
+import { getSessionOrgId, requireAuth } from '@/lib/auth-utils'
 
 export async function getContracts() {
   const session = await auth()
@@ -14,7 +16,23 @@ export async function getContracts() {
   const contracts = await prisma.contract.findMany({
     where: { createdById: (session.user as any).id },
     include: {
-      signatures: true,
+      signatures: {
+        select: {
+          id: true,
+          signerEmail: true,
+          signerName: true,
+          status: true,
+          signedAt: true,
+          signatureSvg: true,
+          createdAt: true,
+          updatedAt: true,
+          contractId: true,
+          token: true,
+          signerId: true,
+          ipAddress: true,
+          userAgent: true,
+        },
+      },
       createdBy: {
         select: {
           name: true,
@@ -37,7 +55,35 @@ export async function getContract(id: string) {
   const contract = await prisma.contract.findUnique({
     where: { id },
     include: {
-      signatures: true,
+      signatures: {
+        select: {
+          id: true,
+          signerEmail: true,
+          signerName: true,
+          status: true,
+          signedAt: true,
+          signatureSvg: true,
+          createdAt: true,
+          updatedAt: true,
+          contractId: true,
+          token: true,
+          signerId: true,
+          ipAddress: true,
+          userAgent: true,
+        },
+      },
+      sections: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
+      template: {
+        select: {
+          id: true,
+          name: true,
+          category: true,
+        },
+      },
       createdBy: {
         select: {
           name: true,
@@ -55,10 +101,8 @@ export async function getContract(id: string) {
 }
 
 export async function createContract(data: unknown) {
-  const session = await auth()
-  if (!session?.user) {
-    throw new Error('Unauthorized')
-  }
+  const session = requireAuth(await auth())
+  const orgId = await getSessionOrgId(session)
 
   const validatedData = contractSchema.parse(data)
 
@@ -66,7 +110,98 @@ export async function createContract(data: unknown) {
     data: {
       ...validatedData,
       createdById: session.user.id,
+      organizationId: orgId,
     },
+  })
+
+  revalidatePath('/contracts')
+  return contract
+}
+
+/**
+ * Create a new contract from a template.
+ * Copies all template sections, replaces variables, and increments usage count.
+ */
+export async function createContractFromTemplate(data: unknown) {
+  const session = requireAuth(await auth())
+  const orgId = await getSessionOrgId(session)
+
+  const validatedData = createContractFromTemplateSchema.parse(data)
+
+  // Fetch template with sections
+  const template = await prisma.contractTemplate.findUnique({
+    where: { id: validatedData.templateId },
+    include: {
+      sections: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
+    },
+  })
+
+  if (!template) {
+    throw new Error('Template not found')
+  }
+
+  if (template.organizationId !== orgId) {
+    throw new Error('Unauthorized')
+  }
+
+  if (!template.isActive) {
+    throw new Error('Template is not active')
+  }
+
+  // Replace variables in section bodies
+  const replaceVariables = (text: string, variables: Record<string, string> = {}) => {
+    let result = text
+    for (const [key, value] of Object.entries(variables)) {
+      const pattern = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
+      result = result.replace(pattern, value)
+    }
+    return result
+  }
+
+  // Create contract with copied sections in a transaction
+  const contract = await prisma.$transaction(async (tx) => {
+    // Create the contract
+    const newContract = await tx.contract.create({
+      data: {
+        title: validatedData.title,
+        description: validatedData.description,
+        content: null, // Section-based contracts have null content
+        templateId: template.id,
+        organizationId: orgId,
+        createdById: session.user.id,
+        expiresAt: validatedData.expiresAt,
+      },
+    })
+
+    // Copy all sections from template
+    const sectionsData = template.sections.map((section) => ({
+      contractId: newContract.id,
+      title: section.title,
+      body: replaceVariables(section.body, validatedData.variables),
+      order: section.order,
+      isEdited: false,
+      originalTemplateSectionId: section.id,
+    }))
+
+    await tx.contractSection.createMany({
+      data: sectionsData,
+    })
+
+    // Increment template usage count
+    await tx.contractTemplate.update({
+      where: { id: template.id },
+      data: {
+        usageCount: {
+          increment: 1,
+        },
+      },
+    })
+
+    return newContract
   })
 
   revalidatePath('/contracts')

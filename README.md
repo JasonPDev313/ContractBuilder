@@ -1,6 +1,6 @@
-# FormBuilder - Contract Management System
+# Contract Caddie Contract Management System
 
-A modern contract management system built with Next.js 16, TypeScript, Prisma, and Supabase. Create, send, and manage e-signature contracts like a simplified DocuSign.
+A modern contract management system built with Next.js 16, TypeScript, Prisma, and Supabase. Professional contract management for golf clubs and organizations with multi-tenant support, template-based contracts, and e-signature capabilities.
 
 ## Tech Stack
 

@@ -19,9 +19,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { MoreVertical, Eye, Edit, Send, Trash2 } from 'lucide-react'
+import { MoreVertical, Eye, Edit, Send, Trash2, FileText } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatDateTime } from '@/lib/utils'
+import { SaveAsTemplateDialog } from '@/components/features/ai-generator/save-as-template-dialog'
 
 interface Contract {
   id: string
@@ -48,6 +49,7 @@ const statusColors = {
 export function ContractList({ contracts }: ContractListProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [templateContractId, setTemplateContractId] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
     if (!confirm('Are you sure you want to delete this contract?')) {
@@ -151,6 +153,12 @@ export function ContractList({ contracts }: ContractListProps) {
                       </>
                     )}
                     <DropdownMenuItem
+                      onSelect={() => setTemplateContractId(contract.id)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Save as Template
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       className="text-destructive"
                       onSelect={() => handleDelete(contract.id)}
                     >
@@ -163,7 +171,7 @@ export function ContractList({ contracts }: ContractListProps) {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Updated {formatDate(contract.updatedAt)}</span>
+                <span>Updated {formatDateTime(contract.updatedAt)}</span>
                 {totalSignatures > 0 && (
                   <span>
                     Signatures: {signedCount}/{totalSignatures}
@@ -174,6 +182,15 @@ export function ContractList({ contracts }: ContractListProps) {
           </Card>
         )
       })}
+      {templateContractId && (
+        <SaveAsTemplateDialog
+          contractId={templateContractId}
+          open={!!templateContractId}
+          onOpenChange={(open) => {
+            if (!open) setTemplateContractId(null)
+          }}
+        />
+      )}
     </div>
   )
 }

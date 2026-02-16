@@ -15,6 +15,8 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { toast } from '@/hooks/use-toast'
 import { CheckCircle, XCircle } from 'lucide-react'
+import { SignaturePad } from '@/components/features/signatures/signature-pad'
+import type { SignatureData } from '@/lib/validations/signature'
 
 interface SignatureFormProps {
   token: string
@@ -24,8 +26,10 @@ interface SignatureFormProps {
 export function SignatureForm({ token, signerName }: SignatureFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [signatureData, setSignatureData] = useState<SignatureData | null>(null)
 
   async function handleSign() {
+    if (!signatureData) return
     setIsLoading(true)
 
     try {
@@ -34,8 +38,9 @@ export function SignatureForm({ token, signerName }: SignatureFormProps) {
       const { ip } = await ipResponse.json()
       const userAgent = navigator.userAgent
 
-      const result = await signContract({
+      await signContract({
         token,
+        signatureData,
         ipAddress: ip,
         userAgent,
       })
@@ -87,23 +92,29 @@ export function SignatureForm({ token, signerName }: SignatureFormProps) {
       <CardHeader>
         <CardTitle>Sign Contract</CardTitle>
         <CardDescription>
-          Hi {signerName}, please review the contract above and sign below
+          Hi {signerName}, please review the contract above and draw your signature below
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <Alert>
           <AlertDescription>
-            By clicking &quot;Sign Contract&quot;, you agree to the terms and conditions
-            outlined in this contract. Your signature will be legally binding and
-            will be recorded along with your IP address and timestamp for audit
-            purposes.
+            By signing below, you agree to the terms and conditions outlined in
+            this contract. Your signature will be legally binding and will be
+            recorded along with your IP address and timestamp for audit purposes.
           </AlertDescription>
         </Alert>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Draw your signature
+          </label>
+          <SignaturePad onSignatureChange={setSignatureData} />
+        </div>
       </CardContent>
       <CardFooter className="flex gap-4">
         <Button
           onClick={handleSign}
-          disabled={isLoading}
+          disabled={isLoading || !signatureData}
           className="flex-1"
         >
           <CheckCircle className="mr-2 h-4 w-4" />

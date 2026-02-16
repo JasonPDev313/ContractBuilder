@@ -1,4 +1,4 @@
-// Prisma schema for FormBuilder - Contract Management System
+// Prisma schema for Contract Caddie Contract Management System
 
 generator client {
   provider = "prisma-client-js"
@@ -8,6 +8,77 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+// ============================================================================
+// ORGANIZATION & MULTI-TENANCY MODELS
+// ============================================================================
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  settings  Json?
+  plan      String    @default("FREE")
+  deletedAt DateTime?
+
+  // AI Usage Limits
+  aiDailyLimit        Int     @default(50) // Max AI requests per day
+  aiMonthlyLimit      Int     @default(500) // Max AI requests per month
+  aiModel             String  @default("gpt-4o-mini") // Preferred model
+  aiEnabled           Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  contracts        Contract[]
+  templates        ContractTemplate[]
+  aiUsage          AIUsage[]
+  aiSuggestions    AISuggestion[]
+  aiConversations  AiConversation[]
+  contractDefaults OrgContractDefaults?
+
+  @@map("organizations")
+}
+
+model OrgContractDefaults {
+  id String @id @default(cuid())
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Venue info
+  venueName    String?
+  venueAddress String?
+
+  // Signer info
+  signerName  String?
+  signerTitle String?
+  signerEmail String?
+  signerPhone String?
+
+  // Payment defaults
+  defaultDepositPercent     Int?
+  defaultPaymentTerms       String?
+  defaultCancellationPolicy String? @db.Text
+
+  // Policy defaults
+  defaultWeatherPolicy  String? @db.Text
+  defaultAlcoholPolicy  String? @db.Text
+  defaultLiabilityTerms String? @db.Text
+
+  // Custom policies (unlimited, stored as JSON array of {name, content})
+  customPolicies Json?
+
+  // Legal
+  jurisdiction String?
+  governingLaw String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("org_contract_defaults")
 }
 
 // ============================================================================
@@ -22,14 +93,23 @@ model User {
   image         String?
   password      String?
   role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   accounts      Account[]
   sessions      Session[]
-  contracts     Contract[]
-  signatures    Signature[]
+  contracts        Contract[]
+  signatures       Signature[]
+  templates        ContractTemplate[]
+  aiUsage          AIUsage[]
+  aiSuggestions    AISuggestion[]
+  aiConversations  AiConversation[]
 
+  @@index([organizationId])
   @@map("users")
 }
 
@@ -73,50 +153,394 @@ model VerificationToken {
 }
 
 // ============================================================================
+// TEMPLATE SYSTEM MODELS
+// ============================================================================
+
+model ContractTemplate {
+  id          String  @id @default(cuid())
+  name        String
+  description String? @db.Text
+  category    String?
+  version     Int     @default(1)
+  isActive    Boolean @default(true)
+  usageCount  Int     @default(0)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  contractType ContractType?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  sections  TemplateSection[]
+  contracts Contract[]
+
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([organizationId, isActive])
+  @@map("contract_templates")
+}
+
+model TemplateSection {
+  id         String   @id @default(cuid())
+  title      String
+  body       String   @db.Text
+  order      Int
+  isRequired Boolean  @default(true)
+  isDefault  Boolean  @default(false)
+  isIncluded Boolean  @default(true)
+  variables  String[]
+
+  templateId String
+  template   ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([templateId, order])
+  @@map("template_sections")
+}
+
+// ============================================================================
 // CONTRACT MANAGEMENT MODELS
 // ============================================================================
 
 model Contract {
-  id          String   @id @default(cuid())
-  title       String
-  description String?  @db.Text
-  content     String   @db.Text
-  status      ContractStatus @default(DRAFT)
+  id           String         @id @default(cuid())
+  title        String
+  description  String?        @db.Text
+  content      String?        @db.Text
+  status       ContractStatus @default(DRAFT)
+  contractType ContractType?
+
+  templateId String?
+  template   ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  expiresAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime?
+  deletedAt DateTime?
 
-  signatures  Signature[]
+  signatures     Signature[]
+  sections       ContractSection[]
+  recipients     ContractRecipient[]
+  deliveries     ContractDelivery[]
+  events         ContractEvent[]
+  aiConversation AiConversation?
 
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([templateId])
+  @@index([status])
+  @@index([contractType])
   @@map("contracts")
 }
 
-model Signature {
-  id          String   @id @default(cuid())
+model ContractSection {
+  id       String  @id @default(cuid())
+  title    String
+  body     String  @db.Text
+  order    Int
+  isEdited Boolean @default(false)
 
-  contractId  String
-  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  originalTemplateSectionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId, order])
+  @@map("contract_sections")
+}
+
+model Signature {
+  id String @id @default(cuid())
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   signerEmail String
   signerName  String
   signerId    String?
-  signer      User?    @relation(fields: [signerId], references: [id], onDelete: SetNull)
+  signer      User?   @relation(fields: [signerId], references: [id], onDelete: SetNull)
 
-  status      SignatureStatus @default(PENDING)
-  signedAt    DateTime?
-  token       String   @unique @default(cuid())
+  status   SignatureStatus @default(PENDING)
+  signedAt DateTime?
+  token    String          @unique @default(cuid())
 
+  ipAddress String?
+  userAgent String?
+
+  // Hand-drawn signature data
+  signatureData Json?    // Normalized stroke data: { strokes: Array<Array<{x, y}>> }
+  signatureSvg  String?  @db.Text // Pre-rendered SVG path d-attribute for display
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("signatures")
+}
+
+// ============================================================================
+// CONTRACT DELIVERY & TRACKING MODELS
+// ============================================================================
+
+model ContractRecipient {
+  id    String  @id @default(cuid())
+  name  String
+  email String
+  phone String?
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  // Public access token (stored hashed for security)
+  accessToken       String   @unique
+  accessTokenHash   String   @unique
+  tokenExpiresAt    DateTime?
+
+  // View tracking
+  viewCount         Int      @default(0)
+  firstViewedAt     DateTime?
+  lastViewedAt      DateTime?
+  lastActivityAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries ContractDelivery[]
+  events     ContractEvent[]
+
+  @@index([contractId])
+  @@index([email])
+  @@index([accessToken])
+  @@map("contract_recipients")
+}
+
+model ContractDelivery {
+  id String @id @default(cuid())
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  recipientId String
+  recipient   ContractRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  // Delivery metadata
+  deliveryMethod String @default("EMAIL") // EMAIL, SMS, LINK, etc.
+  sentAt         DateTime @default(now())
+  sentBy         String // userId who triggered the send/resend
+
+  // Email specific (future)
+  emailSubject   String?
+  emailBody      String? @db.Text
+  emailProvider  String? // e.g., "resend", "sendgrid"
+  emailMessageId String? // provider's message ID
+
+  // Delivery status
+  delivered      Boolean @default(false)
+  deliveredAt    DateTime?
+  bounced        Boolean @default(false)
+  bouncedAt      DateTime?
+  bouncedReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId])
+  @@index([recipientId])
+  @@index([sentAt])
+  @@map("contract_deliveries")
+}
+
+model ContractEvent {
+  id String @id @default(cuid())
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  recipientId String?
+  recipient   ContractRecipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+
+  // Event details
+  eventType   ContractEventType
+  eventData   Json? // Additional metadata
+  description String? @db.Text
+
+  // Who/what triggered this event
+  userId      String? // If triggered by an authenticated user
   ipAddress   String?
   userAgent   String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
 
-  @@map("signatures")
+  @@index([contractId])
+  @@index([recipientId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("contract_events")
+}
+
+// ============================================================================
+// AI ASSISTANT MODELS
+// ============================================================================
+
+model AIUsage {
+  id String @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Request context
+  contractId        String?
+  contractSectionId String?
+  templateId        String?
+
+  // Request details
+  promptType   String // "suggest_language", "improve_clause", etc.
+  model        String // "gpt-4o-mini", "gpt-4", etc.
+  promptTokens Int    @default(0)
+  responseTokens Int  @default(0)
+  totalTokens  Int    @default(0)
+
+  // Cost tracking (in cents)
+  estimatedCost Int @default(0)
+
+  // Request parameters
+  tone         String?
+  jurisdiction String?
+  riskPosture  String?
+  clauseType   String?
+
+  // Response
+  success      Boolean
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_usage")
+}
+
+model AISuggestion {
+  id String @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What was suggested for
+  contractId        String?
+  contractSectionId String?
+  sectionTitle      String
+  originalContent   String? @db.Text
+
+  // AI suggestion
+  suggestedText     String  @db.Text
+  rationale         String? @db.Text
+  alternativeShorter String? @db.Text
+  alternativeStricter String? @db.Text
+
+  // Metadata
+  tone         String?
+  jurisdiction String?
+  riskPosture  String?
+  clauseType   String?
+  model        String
+
+  // User action
+  accepted     Boolean   @default(false)
+  acceptedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([contractId])
+  @@map("ai_suggestions")
+}
+
+// ============================================================================
+// AI CONVERSATION MODELS
+// ============================================================================
+
+model AiConversation {
+  id        String   @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Conversation context
+  contractType ContractType? // Determined during conversation
+  title        String?       // Working title for the contract
+  status       ConversationStatus @default(IN_PROGRESS)
+
+  // Contract generation
+  generatedContractId String?   @unique
+  generatedContract   Contract? @relation(fields: [generatedContractId], references: [id], onDelete: SetNull)
+
+  // Metadata
+  messageCount  Int      @default(0)
+  lastMessageAt DateTime @default(now())
+  completedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages AiConversationMessage[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("ai_conversations")
+}
+
+model AiConversationMessage {
+  id String @id @default(cuid())
+
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role    MessageRole // USER or ASSISTANT
+  content String      @db.Text
+
+  // Extracted data (JSON structure of contract details collected)
+  extractedData Json?
+
+  // AI metadata
+  model          String? // "gpt-4o-mini"
+  promptTokens   Int?
+  responseTokens Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("ai_conversation_messages")
 }
 
 // ============================================================================
@@ -131,6 +555,7 @@ enum UserRole {
 enum ContractStatus {
   DRAFT
   SENT
+  VIEWED
   COMPLETED
   EXPIRED
   CANCELLED
@@ -141,4 +566,38 @@ enum SignatureStatus {
   SIGNED
   DECLINED
   EXPIRED
+}
+
+enum ContractEventType {
+  CREATED
+  SENT
+  RESENT
+  VIEWED
+  DOWNLOADED
+  CANCELLED
+  RECALLED
+  COMPLETED
+  EXPIRED
+  SIGNED
+  DECLINED
+}
+
+enum ContractType {
+  GOLF_OUTING
+  GOLF_LEAGUE
+  WEDDING
+  SPECIAL_EVENT
+  OTHER
+}
+
+enum ConversationStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  CONTRACT_GENERATED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }

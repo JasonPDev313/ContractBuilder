@@ -17,7 +17,7 @@ export default async function Home() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center space-x-2">
             <FileText className="h-6 w-6" />
-            <span className="font-bold text-xl">FormBuilder</span>
+            <span className="font-bold text-xl">Contract Caddie</span>
           </div>
           <div className="flex items-center space-x-4">
             <Button asChild variant="ghost">
@@ -32,11 +32,11 @@ export default async function Home() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         <div className="max-w-3xl text-center space-y-8">
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            Contract Management Made Simple
+            Professional Contract Management for Golf Clubs
           </h1>
           <p className="text-xl text-muted-foreground">
-            Create, send, and manage e-signature contracts with ease.
-            Built for modern teams who value simplicity and security.
+            Streamline your club operations with member agreements, vendor contracts,
+            and event waivers. Built specifically for golf clubs and organizations.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Button asChild size="lg">

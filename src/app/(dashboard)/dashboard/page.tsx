@@ -19,31 +19,20 @@ export default async function DashboardPage() {
 
   const userId = (session.user as any).id
 
-  // Fetch contract statistics
-  const [totalContracts, draftContracts, sentContracts, completedContracts] =
-    await Promise.all([
-      prisma.contract.count({
-        where: { createdById: userId },
-      }),
-      prisma.contract.count({
-        where: {
-          createdById: userId,
-          status: 'DRAFT',
-        },
-      }),
-      prisma.contract.count({
-        where: {
-          createdById: userId,
-          status: 'SENT',
-        },
-      }),
-      prisma.contract.count({
-        where: {
-          createdById: userId,
-          status: 'COMPLETED',
-        },
-      }),
-    ])
+  // Fetch contract statistics in a single query
+  const statusCounts = await prisma.contract.groupBy({
+    by: ['status'],
+    where: { createdById: userId },
+    _count: { _all: true },
+  })
+
+  const countByStatus = Object.fromEntries(
+    statusCounts.map((s) => [s.status, s._count._all])
+  )
+  const totalContracts = statusCounts.reduce((sum, s) => sum + s._count._all, 0)
+  const draftContracts = countByStatus['DRAFT'] || 0
+  const sentContracts = countByStatus['SENT'] || 0
+  const completedContracts = countByStatus['COMPLETED'] || 0
 
   const stats = [
     {
