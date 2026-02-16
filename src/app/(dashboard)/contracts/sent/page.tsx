@@ -1,5 +1,6 @@
 import { getSentContracts } from '@/actions/contract-delivery'
 import { SentContractsList } from '@/components/features/contracts/sent-contracts-list'
+import { AutoRefresh } from '@/components/auto-refresh'
 import { notFound } from 'next/navigation'
 
 export default async function SentContractsPage() {
@@ -11,6 +12,7 @@ export default async function SentContractsPage() {
 
   return (
     <div className="max-w-7xl space-y-6">
+      <AutoRefresh interval={15000} />
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Sent Contracts</h1>
         <p className="text-muted-foreground">
