@@ -17,7 +17,7 @@ export const authConfig = {
       const isOnTemplates = nextUrl.pathname.startsWith('/templates')
       const isOnSettings = nextUrl.pathname.startsWith('/settings')
       const isOnAiGenerator = nextUrl.pathname.startsWith('/ai-generator')
-      const isOnAuth = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/register')
+      const isOnAuth = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/register') || nextUrl.pathname.startsWith('/forgot-password') || nextUrl.pathname.startsWith('/reset-password')
 
       if (isOnDashboard || isOnContracts || isOnTemplates || isOnSettings || isOnAiGenerator) {
         if (isLoggedIn) return true

@@ -1,9 +1,10 @@
 'use server'
 
 import { hash } from 'bcryptjs'
-import { createHash } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { registerSchema } from '@/lib/validations/auth'
+import { registerSchema, forgotPasswordSchema, resetPasswordSchema } from '@/lib/validations/auth'
+import { sendPasswordResetEmail } from '@/lib/email/resend'
 
 export async function register(data: unknown, inviteToken?: string) {
   try {
@@ -109,5 +110,108 @@ export async function register(data: unknown, inviteToken?: string) {
       success: false,
       error: 'An unexpected error occurred',
     }
+  }
+}
+
+export async function requestPasswordReset(data: unknown) {
+  try {
+    const { email } = forgotPasswordSchema.parse(data)
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    })
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return {
+        success: true,
+        message: 'If an account exists with that email, you will receive a password reset link.',
+      }
+    }
+
+    const token = randomUUID()
+
+    // Delete any existing reset tokens for this email
+    await prisma.verificationToken.deleteMany({
+      where: { identifier: email },
+    })
+
+    // Create new token (expires in 1 hour)
+    await prisma.verificationToken.create({
+      data: {
+        identifier: email,
+        token,
+        expires: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    })
+
+    await sendPasswordResetEmail({
+      to: email,
+      name: user.name,
+      resetToken: token,
+    })
+
+    return {
+      success: true,
+      message: 'If an account exists with that email, you will receive a password reset link.',
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+export async function resetPassword(data: unknown) {
+  try {
+    const { token, password } = resetPasswordSchema.parse(data)
+
+    const verificationToken = await prisma.verificationToken.findUnique({
+      where: { token },
+    })
+
+    if (!verificationToken) {
+      return { success: false, error: 'Invalid or expired reset link' }
+    }
+
+    if (verificationToken.expires < new Date()) {
+      // Clean up expired token
+      await prisma.verificationToken.delete({
+        where: { token },
+      })
+      return { success: false, error: 'This reset link has expired. Please request a new one.' }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: verificationToken.identifier },
+    })
+
+    if (!user) {
+      return { success: false, error: 'User not found' }
+    }
+
+    const hashedPassword = await hash(password, 10)
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      })
+
+      await tx.verificationToken.delete({
+        where: { token },
+      })
+    })
+
+    return {
+      success: true,
+      message: 'Password reset successfully. You can now sign in with your new password.',
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: 'An unexpected error occurred' }
   }
 }
