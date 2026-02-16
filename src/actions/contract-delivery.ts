@@ -122,7 +122,7 @@ export async function sendContract(data: unknown) {
     })
 
     // Generate public link
-    const publicLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/c/${token}`
+    const publicLink = `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL}/c/${token}`
 
     return {
       success: true,
@@ -401,7 +401,7 @@ export async function resendContract(data: unknown) {
     })
 
     // Public link remains the same (same access token)
-    const publicLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/c/${recipient.accessToken}`
+    const publicLink = `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL}/c/${recipient.accessToken}`
 
     return {
       success: true,
