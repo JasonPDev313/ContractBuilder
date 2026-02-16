@@ -460,6 +460,17 @@ export async function getSentContracts(filters?: {
             : undefined,
           orderBy: { createdAt: 'desc' },
         },
+        signatures: {
+          select: {
+            id: true,
+            signerName: true,
+            signerEmail: true,
+            status: true,
+            signedAt: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
         deliveries: {
           orderBy: { sentAt: 'desc' },
           take: 1,

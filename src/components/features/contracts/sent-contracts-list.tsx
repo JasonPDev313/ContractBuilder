@@ -33,8 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Eye, MoreVertical, Send, XCircle } from 'lucide-react'
-import { format } from 'date-fns'
+import { Eye, MoreVertical, Send, XCircle, CheckCircle, Clock } from 'lucide-react'
+import { formatDate, formatDateTime } from '@/lib/utils'
 
 interface SentContract {
   id: string
@@ -49,6 +49,14 @@ interface SentContract {
     viewCount: number
     firstViewedAt: Date | null
     lastActivityAt: Date | null
+  }>
+  signatures: Array<{
+    id: string
+    signerName: string
+    signerEmail: string
+    status: string
+    signedAt: Date | null
+    createdAt: Date
   }>
   deliveries: Array<{
     id: string
@@ -79,10 +87,15 @@ export function SentContractsList({ contracts }: SentContractsListProps) {
   const filteredContracts = contracts.filter((contract) => {
     const matchesStatus =
       statusFilter === 'all' || contract.status === statusFilter
+
+    // Search in both recipients and signatures
     const matchesEmail =
       emailFilter === '' ||
       contract.recipients.some((r) =>
         r.email.toLowerCase().includes(emailFilter.toLowerCase())
+      ) ||
+      contract.signatures.some((s) =>
+        s.signerEmail.toLowerCase().includes(emailFilter.toLowerCase())
       )
     return matchesStatus && matchesEmail
   })
@@ -129,15 +142,14 @@ export function SentContractsList({ contracts }: SentContractsListProps) {
                   <TableHead>Recipient</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Sent</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                  <TableHead>Views</TableHead>
+                  <TableHead>Signatures</TableHead>
                   <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredContracts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <p className="text-muted-foreground">
                         No sent contracts found
                       </p>
@@ -146,7 +158,19 @@ export function SentContractsList({ contracts }: SentContractsListProps) {
                 ) : (
                   filteredContracts.map((contract) => {
                     const primaryRecipient = contract.recipients[0]
+                    const primarySignature = contract.signatures[0]
                     const lastDelivery = contract.deliveries[0]
+
+                    // Use recipient data if available, fall back to signature data
+                    const recipientName = primaryRecipient?.name || primarySignature?.signerName
+                    const recipientEmail = primaryRecipient?.email || primarySignature?.signerEmail
+
+                    // Sent date: delivery date, or signature created date, or contract updated date
+                    const sentDate = lastDelivery?.sentAt || primarySignature?.createdAt || contract.updatedAt
+
+                    // Signature progress
+                    const totalSignatures = contract.signatures.length
+                    const signedCount = contract.signatures.filter(s => s.status === 'SIGNED').length
 
                     return (
                       <TableRow key={contract.id}>
@@ -159,14 +183,23 @@ export function SentContractsList({ contracts }: SentContractsListProps) {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          {primaryRecipient ? (
+                          {recipientName || recipientEmail ? (
                             <div>
-                              <div className="font-medium">
-                                {primaryRecipient.name}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {primaryRecipient.email}
-                              </div>
+                              {recipientName && (
+                                <div className="font-medium">
+                                  {recipientName}
+                                </div>
+                              )}
+                              {recipientEmail && (
+                                <div className="text-sm text-muted-foreground">
+                                  {recipientEmail}
+                                </div>
+                              )}
+                              {(contract.signatures.length > 1 || contract.recipients.length > 1) && (
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  +{Math.max(contract.signatures.length, contract.recipients.length) - 1} more
+                                </div>
+                              )}
                             </div>
                           ) : (
                             '-'
@@ -181,25 +214,25 @@ export function SentContractsList({ contracts }: SentContractsListProps) {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {lastDelivery
-                            ? format(new Date(lastDelivery.sentAt), 'PP')
-                            : '-'}
+                          <span className="text-sm">
+                            {formatDate(sentDate)}
+                          </span>
                         </TableCell>
                         <TableCell>
-                          {primaryRecipient?.lastActivityAt
-                            ? format(
-                                new Date(primaryRecipient.lastActivityAt),
-                                'PP'
-                              )
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              {primaryRecipient?.viewCount || 0}
-                            </span>
-                          </div>
+                          {totalSignatures > 0 ? (
+                            <div className="flex items-center gap-1.5">
+                              {signedCount === totalSignatures ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Clock className="h-4 w-4 text-amber-500" />
+                              )}
+                              <span className="text-sm">
+                                {signedCount}/{totalSignatures}
+                              </span>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
